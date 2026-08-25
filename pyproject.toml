@@ -1,0 +1,10 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 120
+
+[tool.ruff.lint]
+# The route/service layer uses a few compact guard clauses; formatting and all correctness rules remain enabled.
+ignore = ["E701", "E702"]

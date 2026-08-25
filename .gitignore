@@ -1,0 +1,31 @@
+# Python runtime and local state
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+venv/
+.env
+instance/
+uploads/
+output/
+tmp/
+
+# Local model artifacts are configured by MODEL_PATH and are not source code.
+models/*.pt
+models/*.task
+
+# Frontend dependencies and build output
+web/node_modules/
+web/dist/
+web/*.tsbuildinfo
+web/test-results/
+web/playwright-report/
+
+# IDE and operating-system files
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db

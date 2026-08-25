@@ -1,0 +1,16 @@
+<script setup lang="ts">
+import { computed, onMounted, ref } from 'vue'
+import { ElMessage } from 'element-plus'
+import request from '../utils/request'
+import type { Result } from '../api/types'
+interface AlertItem { alertId: string; elderId: string; elderName: string; kind: string; status: string; message: string; createdAt: string }
+const loading = ref(false); const active = ref('all'); const alerts = ref<AlertItem[]>([])
+const labels: Record<string,string> = { pending:'待确认', confirmed:'已确认', processing:'处理中', closed:'已关闭', false_positive:'误报' }
+const tabs = [{value:'all',label:'全部'},{value:'pending',label:'待确认'},{value:'processing',label:'处理中'},{value:'closed',label:'已关闭'}]
+const filtered = computed(() => active.value === 'all' ? alerts.value : alerts.value.filter(item => item.status === active.value))
+async function load() { loading.value = true; try { const res = await request.get<Result<AlertItem[]>>('/alerts'); alerts.value = res.data.data } finally { loading.value = false } }
+async function action(item: AlertItem, value: 'confirm'|'false'|'process'|'close') { const res = await request.patch<Result<AlertItem>>(`/alerts/${item.alertId}`, { action: value }); const index = alerts.value.findIndex(entry => entry.alertId === item.alertId); alerts.value[index] = res.data.data; ElMessage.success('告警状态已更新') }
+function riskClass(item: AlertItem) { return item.kind === 'fall' ? 'urgent' : 'caution' }
+onMounted(load)
+</script>
+<template><div class="page"><div class="page-heading"><div><p class="eyebrow">事件响应闭环</p><h1>告警中心</h1><p class="muted">确认、处置和关闭均会记录在事件链路中。</p></div><el-button plain type="primary" @click="load">刷新列表</el-button></div><el-tabs v-model="active" class="system-tabs"><el-tab-pane v-for="tab in tabs" :key="tab.value" :name="tab.value"><template #label>{{ tab.label }}<el-badge v-if="tab.value === 'pending' && alerts.filter(a => a.status === 'pending').length" :value="alerts.filter(a => a.status === 'pending').length" /></template></el-tab-pane></el-tabs><el-skeleton :loading="loading" animated :rows="5"><template #default><el-empty v-if="filtered.length === 0" description="暂无此类告警"/><section v-else class="alert-list"><article v-for="item in filtered" :key="item.alertId" class="incident-card" :class="riskClass(item)"><div class="incident-icon">{{ item.kind === 'fall' ? '!' : '↗' }}</div><div class="incident-main"><div class="incident-title"><h2>{{ item.kind === 'fall' ? '疑似跌倒' : '风险预警' }} · {{ item.elderName }}</h2><el-tag :type="item.kind === 'fall' ? 'danger' : 'warning'" effect="light">{{ item.kind === 'fall' ? '高优先级' : '需关注' }}</el-tag></div><p>{{ item.message }} · {{ item.createdAt?.replace('T',' ').slice(0,16) }}</p><div class="incident-actions"><el-button v-if="item.status === 'pending'" type="danger" @click="action(item,'confirm')">确认并通知家属</el-button><el-button v-if="item.status === 'pending'" @click="action(item,'false')">标记误报</el-button><el-button v-if="item.status === 'confirmed'" type="primary" @click="action(item,'process')">开始处置</el-button><el-button v-if="item.status === 'processing'" type="success" @click="action(item,'close')">完成并关闭</el-button></div></div><el-tag :type="item.status === 'pending' ? 'danger' : item.status === 'closed' ? 'info' : 'warning'">{{ labels[item.status] || item.status }}</el-tag></article></section></template></el-skeleton></div></template>
